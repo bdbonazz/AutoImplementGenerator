@@ -1,0 +1,13 @@
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\bin\Debug\netstandard2.0\ClassLibrary1.deps.json
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\bin\Debug\netstandard2.0\ClassLibrary1.dll
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\bin\Debug\netstandard2.0\ClassLibrary1.pdb
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\obj\Debug\netstandard2.0\ClassLibrary1.csproj.AssemblyReference.cache
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\obj\Debug\netstandard2.0\ClassLibrary1.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\obj\Debug\netstandard2.0\ClassLibrary1.AssemblyInfoInputs.cache
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\obj\Debug\netstandard2.0\ClassLibrary1.AssemblyInfo.cs
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\obj\Debug\netstandard2.0\ClassLibrary1.csproj.CoreCompileInputs.cache
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\obj\Debug\netstandard2.0\ClassLibrary1.dll
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\obj\Debug\netstandard2.0\ClassLibrary1.pdb
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\bin\Debug\netstandard2.0\ClassLibrary2.dll
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\bin\Debug\netstandard2.0\ClassLibrary2.pdb
+C:\Users\Utente\source\repos\WebApplication1\ClassLibrary1\obj\Debug\netstandard2.0\ClassLib.E736BF3C.Up2Date
