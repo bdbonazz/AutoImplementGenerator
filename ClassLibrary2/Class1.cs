@@ -47,10 +47,12 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
             predicate: static (node, cancellationToken_) => node is ClassDeclarationSyntax,
             transform: static (ctx, cancellationToken) =>
             {
+                SemanticModel semanticModel = ctx.SemanticModel;
                 ClassDeclarationSyntax classDeclarationSyntax = (ClassDeclarationSyntax)ctx.TargetNode;
-                
-                string className = classDeclarationSyntax.Identifier.ValueText;
-                string classNameSpace = GetClassNameSpace(classDeclarationSyntax.Parent);
+                ISymbol classSymbol = semanticModel.GetDeclaredSymbol(ctx.TargetNode, cancellationToken)!;
+
+                string className = classSymbol.Name;
+                string classNameSpace = classSymbol.ContainingNamespace.ToDisplayString();
                 InterfaceModel[] interfaces = GetInterfaceModels(ctx.SemanticModel.Compilation, classDeclarationSyntax);
 
                 return new Model(
@@ -61,14 +63,6 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
             }).Where(m => m is not null);
 
         context.RegisterSourceOutput(provider, Execute);
-    }
-    private static string GetClassNameSpace(SyntaxNode? parent)
-    {
-        return parent is NamespaceDeclarationSyntax namespaceDeclarationSyntax
-            ? namespaceDeclarationSyntax.Name.ToString()
-            : parent is FileScopedNamespaceDeclarationSyntax fileScopedNamespaceDeclarationSyntax
-            ? fileScopedNamespaceDeclarationSyntax.Name.ToString()
-            : AutoImplementAttributeNameSpace;
     }
 
     private static InterfaceModel[] GetInterfaceModels(Compilation compilation, ClassDeclarationSyntax classDeclarationSyntax)
