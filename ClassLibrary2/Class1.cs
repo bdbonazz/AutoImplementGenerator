@@ -83,36 +83,19 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
             if (interfaceSymbol is null)
                 continue;
 
-            //Get interface usings, in order to be sure to have the needed usings for the properties that will be generated
-            string[] interfaceUsings = interfaceSymbol
-                .DeclaringSyntaxReferences
-                .FirstOrDefault()?
-                .GetSyntax()
-                .SyntaxTree
-                .GetRoot()
-                .DescendantNodes()
-                .OfType<UsingDirectiveSyntax>()
-                .Select(x => x.ToString())
-                .ToArray() ?? [];
-
-            IPropertySymbol[] interfaceProperties = interfaceSymbol
+            InterfacePropertyModel[] propertyModels = interfaceSymbol
                 .GetMembers()
                 .OfType<IPropertySymbol>()
-                .ToArray();
-
-            InterfacePropertyModel[] propertyModels = interfaceProperties
                 .Select(interfaceProperty =>
                 {
-                    /*Using "interfaceProperty.Type" instead of "interfaceProperty.Type.Name" in order to not have error in specific cases.
-                    Es. the type "int" has Name "Int32", but writing "Int32" casue compilation error if we are not using "System" namespace*/
-                    string type = interfaceProperty.Type.ToString();
+                    string type = interfaceProperty.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     return new InterfacePropertyModel(type, interfaceProperty.Name, interfaceProperty.SetMethod is not null);
                 })
                 .ToArray();
 
             string containingNamespace = interfaceSymbol.ContainingNamespace.ToString();
 
-            ret.Add(new InterfaceModel(interfaceName, containingNamespace, interfaceUsings, propertyModels));
+            ret.Add(new InterfaceModel(interfaceName, containingNamespace, propertyModels));
         }
 
         return [.. ret];
@@ -178,17 +161,14 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
     }
 
     private record Model(string ClassName, string ClassNameSpace, InterfaceModel[] Interfaces);
-    private record InterfaceModel(string Name, string NameSpace, string[] Usings, InterfacePropertyModel[] Properties);
+    private record InterfaceModel(string Name, string NameSpace, InterfacePropertyModel[] Properties);
     private record InterfacePropertyModel(string Type, string Name, bool HasSetter);
 
     private void Execute(SourceProductionContext context, Model model)
     {
         foreach (InterfaceModel interfaceModel in model.Interfaces)
         {
-            string interfaceUsings = string.Join(string.Empty, interfaceModel.Usings);
-
             StringBuilder sourceBuilder = new($$"""
-                    {{interfaceUsings}}
                     using {{interfaceModel.NameSpace}};
 
                     namespace {{model.ClassNameSpace}};
