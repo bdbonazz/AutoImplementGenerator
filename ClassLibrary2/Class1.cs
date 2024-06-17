@@ -40,25 +40,34 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
 """;
             ctx.AddSource($"{AutoImplementAttributeClassName}.g.cs", autoImplementAttributeDeclarationCode);
         });
+
         IncrementalValuesProvider<Model> provider = context.SyntaxProvider.ForAttributeWithMetadataName(
             fullyQualifiedMetadataName: FullyQualifiedMetadataName,
-            predicate: static (node, cancellationToken_) => node is ClassDeclarationSyntax classDeclarationSyntax,
+            predicate: static (node, cancellationToken_) => node is ClassDeclarationSyntax,
             transform: static (ctx, cancellationToken) =>
             {
                 ClassDeclarationSyntax classDeclarationSyntax = (ClassDeclarationSyntax)ctx.TargetNode;
-                InterfaceModel[] interfaces = GetInterfaceModels(ctx.SemanticModel.Compilation, classDeclarationSyntax);
-                string classNameSpace = GetClassNameSpace(classDeclarationSyntax.Parent);
                 
+                string className = classDeclarationSyntax.Identifier.ValueText;
+                string classNameSpace = GetClassNameSpace(classDeclarationSyntax.Parent);
+                InterfaceModel[] interfaces = GetInterfaceModels(ctx.SemanticModel.Compilation, classDeclarationSyntax);
+
                 return new Model(
+                    className,
                     classNameSpace,
-                    classDeclarationSyntax.Identifier.ValueText,
                     interfaces
                     );
             }).Where(m => m is not null);
 
-        IncrementalValueProvider<ImmutableArray<Model>> collection = provider.Collect();
-
-        context.RegisterSourceOutput(provider.Collect(), Execute);
+        context.RegisterSourceOutput(provider, Execute);
+    }
+    private static string GetClassNameSpace(SyntaxNode? parent)
+    {
+        return parent is NamespaceDeclarationSyntax namespaceDeclarationSyntax
+            ? namespaceDeclarationSyntax.Name.ToString()
+            : parent is FileScopedNamespaceDeclarationSyntax fileScopedNamespaceDeclarationSyntax
+            ? fileScopedNamespaceDeclarationSyntax.Name.ToString()
+            : AutoImplementAttributeNameSpace;
     }
 
     private static InterfaceModel[] GetInterfaceModels(Compilation compilation, ClassDeclarationSyntax classDeclarationSyntax)
@@ -94,15 +103,16 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
             InterfacePropertyModel[] propertyModels = interfaceProperties
                 .Select(interfaceProperty =>
                 {
-                    /*Using "interfaceProperty.Type" instead of "interfaceProperty.Type.Name" in order to not have error in specific cases
+                    /*Using "interfaceProperty.Type" instead of "interfaceProperty.Type.Name" in order to not have error in specific cases.
                     Es. the type "int" has Name "Int32", but writing "Int32" casue compilation error if we are not using "System" namespace*/
                     string type = interfaceProperty.Type.ToString();
                     return new InterfacePropertyModel(type, interfaceProperty.Name, interfaceProperty.SetMethod is not null);
                 })
                 .ToArray();
 
-            INamespaceSymbol containingNamespace = interfaceSymbol.ContainingNamespace;
-            ret.Add(new InterfaceModel(interfaceName, containingNamespace.ToString(), interfaceUsings, propertyModels));
+            string containingNamespace = interfaceSymbol.ContainingNamespace.ToString();
+
+            ret.Add(new InterfaceModel(interfaceName, containingNamespace, interfaceUsings, propertyModels));
         }
 
         return [.. ret];
@@ -113,7 +123,7 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
                 .OfType<UsingDirectiveSyntax>()
                 .Select(usingDirective =>
                 {
-                    //get string 'System' from string 'using System;'
+                    //get string "System" from string "using System;"
                     string usingName = usingDirective.ToString().Split(' ').Last().TrimEnd(';');
                     return usingName;
                 })
@@ -150,43 +160,34 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
         string ret = expression.Trim('"');
         return ret;
     }
-    private static INamedTypeSymbol? GetInterfaceSymbol(Compilation compilation, string[] usings, string implementedInterfaceName)
+    private static INamedTypeSymbol? GetInterfaceSymbol(Compilation compilation, string[] nameSpaces, string implementedInterfaceName)
     {
+        // Try Get without NameSpace if interface was already Fully Qualified
         INamedTypeSymbol? interfaceSymbol = compilation.GetTypeByMetadataName(implementedInterfaceName);
         if (interfaceSymbol is not null)
             return interfaceSymbol;
 
-        foreach (string usingString in usings)
+        foreach (string nameSpace in nameSpaces)
         {
-            interfaceSymbol = compilation.GetTypeByMetadataName($"{usingString}.{implementedInterfaceName}");
+            interfaceSymbol = compilation.GetTypeByMetadataName($"{nameSpace}.{implementedInterfaceName}");
             if (interfaceSymbol is not null)
                 return interfaceSymbol;
         }
 
         return null;
     }
-    private static string GetClassNameSpace(SyntaxNode? parent)
-    {
-        return parent is NamespaceDeclarationSyntax namespaceDeclarationSyntax
-            ? namespaceDeclarationSyntax.Name.ToString()
-            : parent is FileScopedNamespaceDeclarationSyntax fileScopedNamespaceDeclarationSyntax
-            ? fileScopedNamespaceDeclarationSyntax.Name.ToString()
-            : AutoImplementAttributeNameSpace;
-    }
 
-    private record Model(string ClassNameSpace, string ClassName, InterfaceModel[] Interfaces);
+    private record Model(string ClassName, string ClassNameSpace, InterfaceModel[] Interfaces);
     private record InterfaceModel(string Name, string NameSpace, string[] Usings, InterfacePropertyModel[] Properties);
     private record InterfacePropertyModel(string Type, string Name, bool HasSetter);
 
-    private void Execute(SourceProductionContext context, ImmutableArray<Model> models)
+    private void Execute(SourceProductionContext context, Model model)
     {
-        foreach (Model model in models)
+        foreach (InterfaceModel interfaceModel in model.Interfaces)
         {
-            foreach (InterfaceModel interfaceModel in model.Interfaces)
-            {
-                string interfaceUsings = string.Join(string.Empty, interfaceModel.Usings);
+            string interfaceUsings = string.Join(string.Empty, interfaceModel.Usings);
 
-                StringBuilder sourceBuilder = new($$"""
+            StringBuilder sourceBuilder = new($$"""
                     {{interfaceUsings}}
                     using {{interfaceModel.NameSpace}};
 
@@ -196,25 +197,24 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
                     {
 
                     """);
-                foreach (InterfacePropertyModel property in interfaceModel.Properties)
-                {
-                    //Check if property has a setter
-                    string setter = property.HasSetter
-                        ? "set; "
-                        : string.Empty;
+            foreach (InterfacePropertyModel property in interfaceModel.Properties)
+            {
+                //Check if property has a setter
+                string setter = property.HasSetter
+                    ? "set; "
+                    : string.Empty;
 
-                    sourceBuilder.AppendLine($$"""
+                sourceBuilder.AppendLine($$"""
                             public {{property.Type}} {{property.Name}} { get; {{setter}}}
                         """);
-                }
-                sourceBuilder.AppendLine("""
+            }
+            sourceBuilder.AppendLine("""
                     }
                     """);
 
-                //Concat class name and interface name to have unique file name if a class implements two interfaces with AutoImplement Attribute
-                string generatedFileName = $"{model.ClassName}_{interfaceModel.Name}.g.cs";
-                context.AddSource(generatedFileName, sourceBuilder.ToString());
-            }
+            //Concat class name and interface name to have unique file name if a class implements two interfaces with AutoImplement Attribute
+            string generatedFileName = $"{model.ClassName}_{interfaceModel.Name}.g.cs";
+            context.AddSource(generatedFileName, sourceBuilder.ToString());
         }
     }
 }
