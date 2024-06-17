@@ -15,7 +15,7 @@ public class AutoImplementGenerator : IIncrementalGenerator
 {
     private const string NameOfString = "nameof(";
     private const string AutoImplementAttributeNameSpace = "AttributeGenerator";
-    private const string AutoImplementAttributeName = "AutoImplement";
+    private const string AutoImplementAttributeName = "AutoImplementProperties";
     private const string AutoImplementAttributeClassName = $"{AutoImplementAttributeName}Attribute";
     private const string FullyQualifiedMetadataName = $"{AutoImplementAttributeNameSpace}.{AutoImplementAttributeClassName}";
 
