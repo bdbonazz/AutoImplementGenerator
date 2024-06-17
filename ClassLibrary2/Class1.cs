@@ -84,13 +84,21 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
             if (interfaceSymbol is null)
                 continue;
 
-            InterfacePropertyModel[] propertyModels = interfaceSymbol
+            string[] propertyModels = interfaceSymbol
                 .GetMembers()
                 .OfType<IPropertySymbol>()
                 .Select(interfaceProperty =>
                 {
                     string type = interfaceProperty.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                    return new InterfacePropertyModel(type, interfaceProperty.Name, interfaceProperty.SetMethod is not null);
+
+                    //Check if property has a setter
+                    string setter = interfaceProperty.SetMethod is not null
+                        ? "set; "
+                        : string.Empty;
+
+                    return $$"""
+                            public {{type}} {{interfaceProperty.Name}} { get; {{setter}}}
+                        """;
                 })
                 .ToArray();
 
@@ -162,8 +170,7 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
     }
 
     private record Model(string ClassName, string ClassNameSpace, InterfaceModel[] Interfaces);
-    private record InterfaceModel(string Name, string NameSpace, InterfacePropertyModel[] Properties);
-    private record InterfacePropertyModel(string Type, string Name, bool HasSetter);
+    private record InterfaceModel(string Name, string NameSpace, string[] Properties);
 
     private void Execute(SourceProductionContext context, Model model)
     {
@@ -179,16 +186,9 @@ sealed class {{AutoImplementAttributeClassName}} : Attribute
                     {
 
                     """);
-            foreach (InterfacePropertyModel property in interfaceModel.Properties)
+            foreach (string property in interfaceModel.Properties)
             {
-                //Check if property has a setter
-                string setter = property.HasSetter
-                    ? "set; "
-                    : string.Empty;
-
-                sourceBuilder.AppendLine($$"""
-                            public {{property.Type}} {{property.Name}} { get; {{setter}}}
-                        """);
+                sourceBuilder.AppendLine(property);
             }
             sourceBuilder.AppendLine("""
                     }
