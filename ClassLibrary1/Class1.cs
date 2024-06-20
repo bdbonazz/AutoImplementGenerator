@@ -1,5 +1,6 @@
 ﻿using ClassLibrarySecond;
 using AttributeGenerator;
+using ClassLibrarySecond.Interfaces;
 
 namespace ClassLibrary1;
 

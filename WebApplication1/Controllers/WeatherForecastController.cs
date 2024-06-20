@@ -1,3 +1,5 @@
+using ClassLibrary1;
+
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApplication1.Controllers;
@@ -27,5 +29,15 @@ public class WeatherForecastController : ControllerBase
             Summary = Summaries[Random.Shared.Next(Summaries.Length)]
         })
         .ToArray();
+    }
+
+    private static float Test()
+    {
+        UserClass userClass = new()
+        {
+            UserProp = "",
+            InterfaceProperty = 0,
+        };
+        return userClass.InterfacePropertyOnlyGetter;
     }
 }
