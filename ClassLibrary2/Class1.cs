@@ -92,7 +92,7 @@ sealed class {{AttributeClassName}} : Attribute
 
         foreach(TypedConstant constructorArgumentValue in attribute.ConstructorArguments[0].Values)
         {
-            if (constructorArgumentValue.Value is not null and INamedTypeSymbol interfaceSymbol)
+            if (constructorArgumentValue.Value is INamedTypeSymbol interfaceSymbol && interfaceSymbol.TypeKind == TypeKind.Interface)
             {
                 EquatableList<string> properties = new();
 
